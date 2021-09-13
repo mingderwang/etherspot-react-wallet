@@ -5,7 +5,6 @@ import {
   Env,
   EnvNames,
   MetaMaskWalletProvider,
-  P2PPaymentChannel,
   NetworkNames,
   sleep,
   randomPrivateKey
@@ -45,11 +44,12 @@ export const EtherspotComponent = ({ text }: Props) => {
   const [receiverAddress, setReceiverAddress] = useState('👽')
   const [p2pPaymentDepositAddress, setP2pPaymentDepositAddress] = useState('👽')
   //  const [depositRec, setDepositRec] = useState('👽')
-  const [gas, setGas] = useState('👽')
-  const [hash2, setHash] = useState('👽')
+  const [gas] = useState('👽')
+  const [hash2] = useState('👽')
   const [receiver, receiverAccountInput] = useState('👽')
   const [amount, amountInput] = useState('👽')
-  const [lastHash, lastHashInput] = useState('👽')
+  const [balance, setBalance] = useState('👽')
+  const [balanceR, setBalanceR] = useState('👽')
 
   useEffect(() => {
     ;(async function run() {
@@ -89,11 +89,15 @@ export const EtherspotComponent = ({ text }: Props) => {
       const Senderbal = await senderEtherspotUser.getAccountBalances()
 
       console.log('Sender balances', Senderbal)
+      setBalance(
+        ethers.utils.formatEther(Senderbal.items[0].balance.toString())
+      )
       console.log(Senderbal.items[0].balance.toString())
       const Rbal = await receiverEtherspotUser.getAccountBalances()
 
       console.log('Receiver balances', Rbal)
       console.log(Rbal.items[0].balance.toString())
+      setBalanceR(ethers.utils.formatEther(Rbal.items[0].balance.toString()))
 
       receiverEtherspotUser.notifications$.subscribe(
         async (notification: any) => {
@@ -156,9 +160,10 @@ export const EtherspotComponent = ({ text }: Props) => {
     })
     console.log('logChannels Sender', channels)
     const size = channels.items.length
+    if (size > 0) {
     //  setHash(channels.items[size - 1].hash)
     console.log('🛰 getP2pChannels.last hash', channels.items[size - 1].hash)
-
+    }
     console.log('xx receiver address', receiverAddress)
     const channelsR = await senderEtherspotUser.getP2PPaymentChannels({
       senderOrRecipient: receiverAddress
@@ -218,142 +223,28 @@ export const EtherspotComponent = ({ text }: Props) => {
 
   return (
     <div className={styles.simple}>
-      To sent:{' '}
-      <input
-        value={amount}
-        onChange={(e) => amountInput(e.target.value)}
-        type='text'
-      />
-      to Account :{' '}
-      <input
-        value={receiver}
-        onChange={(e) => receiverAccountInput(e.target.value)}
-        type='text'
-      />{' '}
-      <p />
-      Hash for withdraw:{' '}
-      <input
-        value={lastHash}
-        onChange={(e) => lastHashInput(e.target.value)}
-        type='text'
-      />
-      🦋 Ethereum Wallet: {text} account: {senderAddress} 🚀 receiver account:{' '}
-      {receiverAddress} 👻
-      <p /> p2pPayment deposit address: {p2pPaymentDepositAddress} ⛽️ estimated
-      Gas {gas} 🦋 last hash: {hash2}
-      <button
-        type='button'
-        onClick={async () => {
-          /**
-           * We're going to set 1 ETH as amount to be transferred.
-           */
-          const partialPaymentValue = 10
-          const partialPaymentCount = 1
-
-          let hashx: string = ''
-
-          for (let index = 1; index <= partialPaymentCount; index++) {
-            const totalAmount = index * partialPaymentValue
-            const paymentChannel = await senderEtherspotUser.updateP2PPaymentChannel(
-              {
-                totalAmount: totalAmount,
-                recipient: receiverEtherspotUser.state.accountAddress
-              }
-            )
-
-            if (hashx === '') {
-              hashx = paymentChannel.hash
-            }
-
-            console.log(`payment channel #${index}`, paymentChannel)
-          }
-
-          console.log('🚘 Hash:', hashx)
-          setHash(hashx)
-        }}
-      >
-        📡 update 30 ETH
-      </button>
-      <button
-        type='button'
-        onClick={async () => {
-          /**
-           * We're going to set 1 ETH as amount to be transferred.
-           */
-          const amountToSend = ethers.utils.parseEther('1')
-          console.log('receiver', receiver)
-          const x: P2PPaymentChannel = await senderEtherspotUser.increaseP2PPaymentChannelAmount(
-            {
-              recipient: receiver, // input receiver address from UI
-              value: amountToSend
-            }
-          )
-          console.log('✈️ channel done', x)
-          console.log('🚘 Hash:', x.hash)
-          setHash(x.hash)
-        }}
-      >
-        📡 increase 1 ETH
-      </button>
-      <button
-        type='button'
-        onClick={async () => {
-          await logChannels()
-          /*
-          const amountToSend = ethers.utils.parseEther('1')
-
-          const output: P2PPaymentChannel = await senderEtherspotUser.increaseP2PPaymentChannelAmount(
-            {
-              recipient: receiverEtherspotUser.state.accountAddress,
-              value: amountToSend
-            }
-          )
-          
-
-          // This is the hash we will use in the next step.
-          console.log('Hash:', output)
-*/
-          // require to clear all batch
-          await receiverEtherspotUser.clearGatewayBatch()
-
-          /**
-           * Next, commit the Payment Channel. The
-           * batchCommitP2PPaymentChannel takes an object with two
-           * properties:
-           * - hash: the previously created Payment channel hash
-           * - deposit:
-           * - - true: the exchange amount is transferred to the p2pDepositAddress.
-           * - - false: the exchange amount is transferred to the accountAddress
-           */
-          await receiverEtherspotUser
-            .batchCommitP2PPaymentChannel({
-              hash: lastHash ? lastHash : hash2,
-              deposit: false // See notes above
-            })
-            .catch(console.error)
-          console.log('sender hash', hash2)
-          console.log('input hash', lastHash)
-
-          const es: any = await receiverEtherspotUser.estimateGatewayBatch()
-          console.log('gas', es.estimation.estimatedGas)
-          setGas(es.estimation.estimatedGas)
-
-          await receiverEtherspotUser
-            .submitGatewayBatch()
-            .then(async () => {
-              await senderEtherspotUser
-                .batchWithdrawP2PPaymentDeposit({
-                  amount: '0x0de0b6b3a7640000' // 1 ETH
-                })
-                .then(console.log)
-            })
-            .catch(console.error)
-
-          await logDeposits()
-        }}
-      >
-        📡 withDraw !!
-      </button>
+      <div>
+        🦋 Simple Ethereum Wallet 🦋 <p />
+        To sent:{' '}
+        <input
+          value={amount}
+          onChange={(e) => amountInput(e.target.value)}
+          type='text'
+        />{' '}
+        ETH to Account :{' '}
+        <input
+          value={receiver}
+          onChange={(e) => receiverAccountInput(e.target.value)}
+          type='text'
+        />{' '}
+        <p />
+        {text} account: {senderAddress}: {balance} ETH
+        <p />
+        🚀 receiver account: {receiverAddress}: {balanceR} ETH
+        <p /> 👻
+        <p /> p2pPayment deposit address: {p2pPaymentDepositAddress} ⛽️
+        estimated Gas {gas} 🦋 last hash: {hash2}
+      </div>
       <button
         type='button'
         onClick={async () => {
@@ -362,7 +253,7 @@ export const EtherspotComponent = ({ text }: Props) => {
           await logChannels()
         }}
       >
-        📡 logs!!
+        📡 show logs in console
       </button>
       <button
         type='button'
@@ -420,7 +311,7 @@ export const EtherspotComponent = ({ text }: Props) => {
           )
         }}
       >
-        📡 send 1 ETH to receiver!! (test)
+        📡 send ETH to receiver!
       </button>
     </div>
   )
