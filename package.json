@@ -1,6 +1,6 @@
 {
   "name": "etherspot-react-wallet",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An ETH-Wallet react component for Jira, powered by Etherspot",
   "author": "Ming-der Wang<mingderwang@gmail.com>",
   "license": "MIT",
