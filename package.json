@@ -4,7 +4,7 @@
   "description": "An ETH-Wallet react component for Jira, powered by Etherspot",
   "author": "Ming-der Wang<mingderwang@gmail.com>",
   "license": "MIT",
-  "repository": "mingderwang/etherspot-react",
+  "repository": "mingderwang/etherspot-react-wallet",
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.tsx",
